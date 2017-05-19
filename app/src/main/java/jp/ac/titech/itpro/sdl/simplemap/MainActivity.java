@@ -10,12 +10,12 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -26,7 +26,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
 public class MainActivity extends AppCompatActivity implements
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener, View.OnClickListener {
     private final static String TAG = "MainActivity";
 
     private GoogleMap googleMap;
@@ -43,6 +43,10 @@ public class MainActivity extends AppCompatActivity implements
             Manifest.permission.ACCESS_FINE_LOCATION
     };
     private final static int REQCODE_PERMISSIONS = 1111;
+
+    private Button syncButton;
+    private Location lastLocation;
+    private boolean initial = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +71,9 @@ public class MainActivity extends AppCompatActivity implements
         locationRequest.setInterval(10000);
         locationRequest.setFastestInterval(5000);
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+
+        syncButton = (Button) findViewById(R.id.sync_button);
+        syncButton.setOnClickListener(this);
     }
 
     @Override
@@ -121,8 +128,12 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onLocationChanged(Location location) {
         Log.d(TAG, "onLocationChanged: " + location);
-        googleMap.animateCamera(CameraUpdateFactory
-                .newLatLng(new LatLng(location.getLatitude(), location.getLongitude())));
+        lastLocation = location;
+        if (initial) {
+            googleMap.animateCamera(CameraUpdateFactory
+                    .newLatLng(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude())));
+            initial = false;
+        }
     }
 
     @Override
@@ -130,9 +141,9 @@ public class MainActivity extends AppCompatActivity implements
                                            @NonNull String[] permissions, @NonNull int[] grants) {
         Log.d(TAG, "onRequestPermissionsResult");
         switch (reqCode) {
-        case REQCODE_PERMISSIONS:
-            startLocationUpdate(false);
-            break;
+            case REQCODE_PERMISSIONS:
+                startLocationUpdate(false);
+                break;
         }
     }
 
@@ -158,4 +169,17 @@ public class MainActivity extends AppCompatActivity implements
         LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
         state = UpdatingState.STOPPED;
     }
+
+    @Override
+    public void onClick(View v) {
+        Log.d(TAG, "onClick");
+        switch (v.getId()) {
+            case R.id.sync_button:
+                googleMap.animateCamera(CameraUpdateFactory
+                        .newLatLng(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude())));
+                break;
+        }
+
+    }
+
 }
